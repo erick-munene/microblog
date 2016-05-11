@@ -1,39 +1,41 @@
-from flask import render_template
-from app import app
+from flask import render_template, flash, redirect, session, url_for, request, g
+from flask.ext.login import login_user, logout_user, current_user, \
+    login_required
+from app import app, db, lm, oid
+from .forms import LoginForm
+from .models import User
+
+
+@lm.user_loader
+def load_user(id):
+    return User.query.get(int(id))
+
+
+@app.before_request
+def before_request():
+    g.user = current_user
 
 
 @app.route('/')
 @app.route('/index')
+@login_required
 def index():
-    user = {'nickname': 'Erick'}  # fake user
-    posts = [  # fake array of posts
-        { 
-            'author': {'nickname': 'John'}, 
-            'body': 'Beautiful day in Portland!' 
+    user = g.user
+    posts = [
+        {
+            'author': {'nickname': 'John'},
+            'body': 'Beautiful day in Portland!'
         },
-        { 
-            'author': {'nickname': 'Susan'}, 
-            'body': 'The Avengers movie was so cool!' 
+        {
+            'author': {'nickname': 'Susan'},
+            'body': 'The Avengers movie was so cool!'
         }
     ]
-    return render_template("index.html",
+    return render_template('index.html',
                            title='Home',
                            user=user,
                            posts=posts)
 
-#=============this is the loging form=================
-from flask import render_template, flash, redirect, session, url_for, request, g
-from flask.ext.login import login_user, logout_user, current_user, login_required
-from app import app, db, lm, oid
-from .forms import LoginForm
-from .models import User
-# index view function suppressed for brevity
-
-
-#=============this is the loging form end=================
-
-
-##=============this is the receiving form data=================
 
 @app.route('/login', methods=['GET', 'POST'])
 @oid.loginhandler
@@ -44,19 +46,11 @@ def login():
     if form.validate_on_submit():
         session['remember_me'] = form.remember_me.data
         return oid.try_login(form.openid.data, ask_for=['nickname', 'email'])
-    return render_template('login.html', 
+    return render_template('login.html',
                            title='Sign In',
                            form=form,
                            providers=app.config['OPENID_PROVIDERS'])
-#
-##=============this is the receiving form data end=============
 
-
-##=============this calls the user from database===============
-@lm.user_loader
-def load_user(id):
-    return User.query.get(int(id))
-##============================ end ============================
 
 @oid.after_login
 def after_login(resp):
@@ -75,35 +69,11 @@ def after_login(resp):
     if 'remember_me' in session:
         remember_me = session['remember_me']
         session.pop('remember_me', None)
-    login_user(user, remember = remember_me)
+    login_user(user, remember=remember_me)
     return redirect(request.args.get('next') or url_for('index'))
 
-
-@app.route('/')
-@app.route('/index')
-@login_required
-def index():
-    user = g.user
-    posts = [
-        { 
-            'author': {'nickname': 'John'}, 
-            'body': 'Beautiful day in Portland!' 
-        },
-        { 
-            'author': {'nickname': 'Susan'}, 
-            'body': 'The Avengers movie was so cool!' 
-        }
-    ]
-    return render_template('index.html',
-                           title='Home',
-                           user=user,
-                           posts=posts)
 
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('index'))
-
-@app.route('/logout')
-def logout():
-    g.user = current_user
