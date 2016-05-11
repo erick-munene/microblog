@@ -103,3 +103,7 @@ def index():
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
+@app.route('/logout')
+def logout():
+    g.user = current_user
