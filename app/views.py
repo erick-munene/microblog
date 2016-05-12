@@ -44,6 +44,7 @@ def login():
         return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
+        return redirect('/index')
         session['remember_me'] = form.remember_me.data
         return oid.try_login(form.openid.data, ask_for=['nickname', 'email'])
     return render_template('login.html',
@@ -73,7 +74,7 @@ def after_login(resp):
     return redirect(request.args.get('next') or url_for('index'))
 
 
-@app.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
+#@app.route('/logout')
+#def logout():
+#    logout_user()
+#    return redirect('/index.html')
